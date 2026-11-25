@@ -160,6 +160,10 @@ mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px}
 .muted-s{color:var(--muted)}
 .otr-lockbtn{font:inherit;font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline}
 .otr-item{cursor:pointer}
+.seg{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin:12px 0 4px;background:var(--bg);border-radius:12px}
+.seg button{font:inherit;font-size:13.5px;font-weight:700;border:0;background:none;color:var(--muted);border-radius:9px;height:34px;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.lead-title{font-weight:800;font-size:15px;line-height:1.3;margin:12px 0 0}
 footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
 </style>
 </head>
@@ -171,10 +175,7 @@ footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
         <button class="tool icon-only" id="searchBtn" aria-label="Поиск" title="Поиск"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
         <button class="tool tool-ex" id="examBtn" title="Зачёты и экзамены">Зачёты</button>
         <button class="tool tool-otr" id="otrBtn" title="Отработки">Отработки<span class="otr-badge" id="otrBadge" hidden></span></button>
-        <span class="tools-br"></span>
-        <button class="tool" data-lead="mvd" title="Руководство МВД России">МВД</button>
-        <button class="tool" data-lead="uni" title="Руководство университета"><span class="lbl-l">Университет</span><span class="lbl-s">МосУ</span></button>
-        <button class="tool" data-lead="inst" title="Руководство института">Институт</button>
+        <button class="tool" id="leadBtn" title="Руководство">Руководство</button>
       </div></div>
     <div class="nav">
       <button class="arrow" id="prev" aria-label="Предыдущая неделя">‹</button>
@@ -266,10 +267,15 @@ document.getElementById("mClose").onclick=closeModal;
 modal.addEventListener("click",e=>{if(e.target===modal)closeModal()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden)closeModal()},true);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-document.querySelectorAll("[data-lead]").forEach(b=>b.onclick=()=>{const L=LEAD[b.dataset.lead];openModal(L.title);let html="";
+const LEAD_TABS=[["mvd","МВД"],["uni","Университет"],["inst","Институт"]];
+function leadHtml(k){const L=LEAD[k];let html='<div class="lead-title">'+esc(L.title)+"</div>";
   L.sections.forEach(([sec,ps])=>{if(sec)html+='<div class="m-sec">'+esc(sec)+"</div>";else html+='<div class="m-sec" style="margin-top:8px"></div>';
-    ps.forEach(p=>{html+='<div class="person'+(p[3]?" head":"")+'"><img class="av" src="'+p[4]+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(p[0])+'</div><div class="ps">'+esc(p[1])+'</div><div class="rk">'+esc(p[2])+"</div></div></div>"})});
-  mBody.innerHTML=html;document.getElementById("mClose").focus()});
+    ps.forEach(p=>{html+='<div class="person'+(p[3]?" head":"")+'"><img class="av" src="'+p[4]+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(p[0])+'</div><div class="ps">'+esc(p[1])+'</div><div class="rk">'+esc(p[2])+"</div></div></div>"})});return html}
+let leadTab=(()=>{try{return localStorage.getItem("lead_tab")||"mvd"}catch(e){return "mvd"}})();
+document.getElementById("leadBtn").onclick=()=>{openModal("Руководство");
+  mBody.innerHTML='<div class="seg" role="tablist">'+LEAD_TABS.map(([k,t])=>'<button role="tab" data-k="'+k+'">'+t+"</button>").join("")+'</div><div id="leadBody"></div>';
+  const show=k=>{leadTab=k;try{localStorage.setItem("lead_tab",k)}catch(e){}mBody.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===k));document.getElementById("leadBody").innerHTML=leadHtml(k);mBody.scrollTop=0};
+  mBody.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>show(b.dataset.k));show(leadTab);document.getElementById("mClose").focus()};
 const ALL=RAW.split(";").map((r,i)=>{const[d,t,s,p,te]=r.split("|");return{d,t,s:+s,p:+p,te:+te,topic:fmtTopic(TP[TI[i]])}});
 const norm=s=>s.toLowerCase().replace(/ё/g,"е");
 function hl(text,q){const n=norm(text);let out="",i=0;if(!q)return esc(text);let j;while((j=n.indexOf(q,i))>=0){out+=esc(text.slice(i,j))+"<mark>"+esc(text.slice(j,j+q.length))+"</mark>";i=j+q.length}return out+esc(text.slice(i))}
