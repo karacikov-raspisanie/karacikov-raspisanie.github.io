@@ -129,6 +129,37 @@ mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px}
 @media (max-width:440px){.tools{gap:5px;flex-wrap:nowrap}.tool{padding:0 8px;font-size:12.5px;height:32px}.tool.icon-only{width:32px}}
 .lbl-s{display:none}.tool{flex:none}
 @media (max-width:390px){.lbl-l{display:none}.lbl-s{display:inline}}
+.tool-otr{position:relative}
+.otr-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--sem-i);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1}
+.otr-badge[hidden]{display:none}
+.otr-item{display:grid;grid-template-columns:62px 1fr;gap:12px;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;border-top:1px solid var(--line);padding:12px 2px;cursor:pointer;align-items:start}
+.m-sec+.otr-item{border-top:0}
+.otr-item:hover{background:color-mix(in srgb,var(--line) 35%,transparent)}
+.otr-item.open .ex-day{border-color:var(--sem-i)}
+.otr-item.open .ex-when{color:var(--sem-i)}
+.otr-st{font-size:12px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
+.otr-st.todo{background:var(--sem);color:var(--sem-i)}
+.otr-st.done{background:var(--lec);color:var(--lec-i)}
+.otr-reason{font-size:12px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.miss{font-size:11.5px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap;background:var(--sem);color:var(--sem-i)}
+.miss.ok{background:var(--lec);color:var(--lec-i)}
+.tools-br{display:none}
+@media (max-width:560px){.tools{flex-wrap:wrap!important;row-gap:6px}.tools-br{display:block;flex-basis:100%;height:0}}
+.otr-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.otr-acts:empty{display:none}
+.otr-acts button,.otr-mark button{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 10px;cursor:pointer}
+.otr-mark{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.otr-mark .s-input{margin:0;width:auto;font-size:14px;padding:6px 8px}
+.otr-add{display:block;width:100%;margin-top:12px;font:inherit;font-weight:700;font-size:14px;border:1px dashed var(--muted);background:none;color:var(--ink);border-radius:10px;padding:10px;cursor:pointer}
+.otr-addform{display:grid;gap:10px;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.otr-addform label{display:grid;gap:4px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.otr-addform .s-input{margin:0;background:var(--card)}
+.oa-list{display:grid;gap:6px}
+.oa-opt{display:flex!important;gap:10px;align-items:flex-start;font-size:14px!important;font-weight:500!important;color:var(--ink)!important;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;cursor:pointer}
+.oa-opt input{margin-top:3px}
+.muted-s{color:var(--muted)}
+.otr-lockbtn{font:inherit;font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline}
+.otr-item{cursor:pointer}
 footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
 </style>
 </head>
@@ -139,6 +170,8 @@ footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
       <div class="tools">
         <button class="tool icon-only" id="searchBtn" aria-label="Поиск" title="Поиск"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
         <button class="tool tool-ex" id="examBtn" title="Зачёты и экзамены">Зачёты</button>
+        <button class="tool tool-otr" id="otrBtn" title="Отработки">Отработки<span class="otr-badge" id="otrBadge" hidden></span></button>
+        <span class="tools-br"></span>
         <button class="tool" data-lead="mvd" title="Руководство МВД России">МВД</button>
         <button class="tool" data-lead="uni" title="Руководство университета"><span class="lbl-l">Университет</span><span class="lbl-s">МосУ</span></button>
         <button class="tool" data-lead="inst" title="Руководство института">Институт</button>
@@ -207,6 +240,7 @@ function render(scroll){
         const el=document.createElement("div");el.className="les"+(x.topic?" has-topic":"");el.dataset.k=k+"|"+x.t;
         el.innerHTML='<div class="time">'+x.t+"<small>"+(END[x.t]||"")+'</small></div><div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24">'+IC[x.s]+'</svg></div><div><div class="subj"></div><div class="meta"><span class="type '+PC[x.p]+'"></span><span class="teacher"></span></div><div class="topic"></div></div>';
         el.querySelector(".subj").textContent=S[x.s];el.querySelector(".type").textContent=P[x.p];el.querySelector(".teacher").textContent=T[x.te];
+        {const mo=(typeof missMap!=="undefined")&&missMap[k+"|"+x.t];if(mo){const s=document.createElement("span");s.className="miss"+(mo.done?" ok":"");s.textContent=mo.done?"пропуск · отработан":"пропуск · отработать";el.querySelector(".meta").appendChild(s)}}
         if(x.topic){el.querySelector(".topic").textContent=x.topic;el.tabIndex=0;el.setAttribute("role","button");el.setAttribute("aria-expanded","false");const tg=()=>{const o=el.classList.toggle("open");el.setAttribute("aria-expanded",o)};el.onclick=tg;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tg()}}}
         l.appendChild(el)});
       sec.appendChild(l)}
@@ -281,6 +315,77 @@ document.getElementById("examBtn").onclick=()=>{openModal("Зачёты и эк�
   mBody.innerHTML=html;
   mBody.querySelectorAll(".ex-item").forEach(b=>b.onclick=()=>jumpTo(all[+b.dataset.g].items[0]));
   document.getElementById("mClose").focus()};
+
+const OTR_ENC={"s": "Qkba+gtPHPt/MahCKVNTng==", "i": "hSw/QGDQbNcs/yzV", "n": 200000, "c": "FXMpGAmtOJMw1x++zXnYc1CgbUJpYw9W8omvfiTHca1jXQ+o7WaTszRb3bgv+dzGvoTFr9WH8y26ngPPbsAlil6GypxGE/p5MYbIz2rmqqS36+3ooRLVf53VRpiSo1piyyn3nK1GSGd9/UKk1z1cFp/fK1VwO8e6EqDSMStkH2WK+YcLjg8RdcKj/R9A9FExkCEexg8yZGIaW0v1DD2CP5T0ovfoc1Xky96nzafyM6+0LrJ9OvBP4P9jIFart9yIxgIDnlObaH+tADUsAxASWEvVd29mKG0QIMXSYeZu4N5dqePOweVUA7v6hBfYPYaIFuBmREIVTQkzyKBIr3GHRujNixALe/qzqo75qsXXaNyCy/0Zno4Hum8HnSxkYoxCoZCXz7nMgk9VwWpVdd0RY3717bHTAbqEv2SCmujl16ZvUb4hH8mekI38dVdaj0JLOWbKJEpWn6yoT1f3TvJ2Zp0T1tIRjSQijRNLAZC7ga6l6CjiHIFHms23eeSldiwrqltfsg69Z6r8MXraUXCzxC8Cllx1d9QD63NdE3BO0s/nnu7BdV6u6auRh/MeCYGomdVPlPZ9Wbi/H7z25NT/yWJ9yTdz9dyR63/gWDFyVvdMQP0BAkOYrrJMD//uUi1v4xcNR4KuiNTH/UG92OjTLiM+sc0rA8Ac5CsuIx75qF0B9IjVRYDGDZQmpO+uNK1b6fGjpkL0J6+LeeATkCgSpbHK5SGpZsNpN4ov2a048EzlPji5DrXPWjT4xXrzQhqZHthcwhxFHZ0AwHwULKx7ahTfS37vNXygmo/TyhHjn9QAiHbVR8c0dVcErW0XQfWnk2uamU7mh7FN44+YHdEBDWbFpZC2iQqacnEwjpiRgwWYO7Ddn4tGKSmH1QOqh6K2DwVXS6wIowlVv5DJ2GSMnaNstfWbODCzzXlKmSsevZqrgwjGNVxDx3RuN9CJA5FLBp2Xu9uTFRExBtJwA3aQ4w49hrNU94Lp/uam+pKIQa1/BIaJowoa1p00KqyoHlk1U7xIo+VR/gub/ZVI3O5fYzrJLXQtPu9Xp/QUAhyZLEAKVGZ4o5k5EtJFIP4EW15JUpWn4pRbzGaYRrbGm9YFvmR1PgtKO4GwS71DtShAYiY0QBKKxmZkwaFdh0dQ3ufpkQ39c1k/9yFaQcbrrp0o4mb+eEL47OUWObx0hRXdafozTgsYYoUgiBPoyi0W8102MlDu6jX6qBN3yYkbQ79uJLBmDFlxf6IN8SCNL7xrc+AkxE4dQoUWCWl3tni81ehC8oiG4/F5o51fQFg/PnoaYkIMk6XDpTdVGDfWn/7a0nbiwOfDKq1mYVSN/p2UbJ31ugkCsxV5R1BG3tpVrOSDSbPNVZVDZd205cIIsn8wfZh5gvJ+SAW5w3eqOug6I1P2+//D2n/kBlRXDX0VTauDYZwMG7oJxllADQdJf/U7rdKiG+0E5xx6w2jT3Am2We/lfENehStn/YtfiFVpqIATt2003kkIjdr+pAfa+V2lk3xYKuoMhfABJ5YuQIRJaALnvE3XtZfKPhfa1t6vG6gP3k5VYKR0vcG0WT151SSCmY1ounhAKQSrVejyY8fgvL9wRQL2GDds34RyrF3XZ1132dSSX1scGuFWu4ABcCn2CejlIPVnX50FvUy8Vc0L0f4gnHM7+FqyN/vNJFedrkrgBbhIxIp2JbJtRhCJpjU959afDKTX5VvyO0TfSPGVntRkYpRvgpbeqU13wf7Nr5Uctn2Jy+kSYYCQUsTbcPpbBc5tltBL2pq0LuwKfIO3gnRCGscZ5WunnMC5WrZWaEBkOSWCAZjj+okbdQMN3HX/3grj0MQae9H5pwnJTYG5QetJf7+0sOb3Cd6y1xE1s+y4PCvBESyfhvM5uZQpG3mtfA15hJNzI6Az"};
+const OTR_SUBJ={"ОИБ":8,"ОПСД":1,"СПФП":7,"ДОВДРФВУСПР":5,"Административное право":0,"История России":6,"Высшая математика":4,"Физическая подготовка":9};
+const OTR_FORM={"л":"Лекция","с":"Семинар","п":"Практическое занятие"};
+const OTR_FORM_C={"л":"t-lec","с":"t-sem","п":"t-pr"};
+const OTR_REASON={"Неуд":"неуд. оценка"};
+const OTR_MARKS=["отр.","отл.","хор.","удов."];
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let otrBase=null,otrList=[],missMap={};
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function otrDecrypt(code){try{const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(OTR_ENC.s),iterations:OTR_ENC.n,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(OTR_ENC.i)},key,b64(OTR_ENC.c));return JSON.parse(new TextDecoder().decode(pt))}catch(e){return null}}
+const formOf=p=>p===0?"л":p===1?"с":(p===2||p===3)?"п":null;
+function otrBuild(){
+  const marks=ls.get("otr_marks",{}),local=ls.get("otr_local",[]),hidden=ls.get("otr_hidden",[]);
+  const base=(otrBase||[]).map(([s,tn,f,d,r,te,dd,mk],i)=>{const si=OTR_SUBJ[s];const lesson=ALL.find(x=>x.d===d&&x.s===si&&(x.topic||"").startsWith("Тема "+tn+"."))||ALL.find(x=>x.d===d&&x.s===si);
+    return{id:"b"+i,s:si,name:si!=null?S[si]:s,tn,f,ft:null,d,r,te,dd,mk,lesson,local:false}});
+  const loc=local.map(o=>{const lesson=ALL.find(x=>x.d===o.d&&x.t===o.t);return{id:o.id,s:lesson?lesson.s:null,name:lesson?S[lesson.s]:"Пара",tn:"",f:lesson?formOf(lesson.p):null,ft:lesson?P[lesson.p]:"",d:o.d,r:o.r,te:lesson?T[lesson.te]:"",dd:"",mk:"",lesson,local:true}});
+  otrList=base.concat(loc).filter(o=>!hidden.includes(o.id)).map(o=>{const m=marks[o.id];if(m&&!o.dd){o.dd=m.dd;o.mk=m.mk}o.done=!!o.dd;return o});
+  otrList.sort((a,b)=>dateOf(a.d)-dateOf(b.d)||((a.lesson&&a.lesson.t)||"").localeCompare((b.lesson&&b.lesson.t)||""));
+  missMap={};otrList.forEach(o=>{if(o.lesson)missMap[o.lesson.d+"|"+o.lesson.t]=o});
+  const open=otrList.filter(o=>!o.done).length,b=document.getElementById("otrBadge");b.textContent=open;b.hidden=!open;
+}
+async function otrInit(){const code=ls.get("otr_code",null);if(code){otrBase=await otrDecrypt(code);if(!otrBase){ls.del("otr_code");return}otrBuild();render(false)}}
+const fmtDM=s=>{const[d,m]=s.split(".");return +d+" "+MON_S[+m-1]};
+const todayDM=()=>key(new Date());
+function otrShowLock(msg){openModal("Отработки");
+  mBody.innerHTML='<form id="otrLock" style="padding:18px 0 6px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:12px">Введите код доступа</div><input class="s-input" id="otrCode" type="password" inputmode="numeric" autocomplete="off" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:.3em;margin:0 auto;display:block"><button class="tool" type="submit" style="margin:14px auto 0;height:40px;padding:0 22px">Открыть</button></form>';
+  const f=document.getElementById("otrLock"),inp=document.getElementById("otrCode");setTimeout(()=>inp.focus(),30);
+  f.onsubmit=async e=>{e.preventDefault();const code=inp.value.trim();const data=code?await otrDecrypt(code):null;
+    if(data){otrBase=data;ls.set("otr_code",code);otrBuild();render(false);otrShowList()}
+    else mBody.innerHTML='<div style="text-align:center;padding:34px 10px 26px"><div style="font-size:40px;margin-bottom:10px">🛠</div><div style="font-weight:800;font-size:17px">В данный момент этот раздел в разработке</div><div style="color:var(--muted);font-size:14px;margin-top:6px">Загляните позже</div></div>'}}
+function otrRow(o,i){const dt=dateOf(o.d);
+  return '<div class="otr-item'+(o.done?"":" open")+'" data-i="'+i+'"><div class="ex-day"><b>'+dt.getDate()+"</b><small>"+MON_S[dt.getMonth()]+'</small></div><div><div class="ex-when">'+(o.done?"отработано "+fmtDM(o.dd):"пропуск · "+DOW[dt.getDay()]+(o.lesson?" · "+o.lesson.t:""))+'</div><div class="subj">'+esc(o.name)+'</div><div class="meta">'+
+  (o.f?'<span class="type '+OTR_FORM_C[o.f]+'">'+esc(OTR_FORM[o.f])+"</span>":o.ft?'<span class="type t-oth">'+esc(o.ft)+"</span>":"")+(o.r?'<span class="otr-reason">'+esc(OTR_REASON[o.r]||o.r)+"</span>":"")+
+  (o.done?'<span class="otr-st done">'+esc(o.mk)+"</span>":'<span class="otr-st todo">нужно отработать</span>')+'<span class="teacher">'+esc(o.te)+"</span></div>"+
+  '<div class="st" style="font-size:13px;color:var(--muted);margin-top:5px">'+esc(o.lesson&&o.lesson.topic?o.lesson.topic:(o.tn?"Тема "+o.tn:""))+"</div>"+
+  '<div class="otr-acts">'+(o.done?(o.local||ls.get("otr_marks",{})[o.id]?'<button data-act="undo">Вернуть в «нужно отработать»</button>':""):'<button data-act="done">✓ Отработал</button>')+(o.local?'<button data-act="del">Удалить</button>':"")+"</div></div></div>"}
+function otrShowList(){openModal("Отработки");const open=otrList.filter(o=>!o.done);
+  let html='<div class="ex-sum"><span>Не отработано: '+open.length+'</span><span>Отработано: '+(otrList.length-open.length)+'</span></div><button class="otr-add" id="otrAdd">+ Добавить пропущенную пару</button><div id="otrForm"></div>';
+  if(open.length){html+='<div class="m-sec">Нужно отработать</div>';otrList.forEach((o,i)=>{if(!o.done)html+=otrRow(o,i)})}
+  const done=otrList.map((o,i)=>[o,i]).filter(([o])=>o.done).sort((a,b)=>dateOf(b[0].dd)-dateOf(a[0].dd));
+  if(done.length){html+='<div class="m-sec">Отработано</div>';done.forEach(([o,i])=>html+=otrRow(o,i))}
+  html+='<div style="text-align:center;margin-top:18px"><button class="otr-lockbtn" id="otrLockBtn">Закрыть доступ на этом устройстве</button></div>';
+  mBody.innerHTML=html;
+  mBody.querySelectorAll(".otr-item").forEach(el=>el.onclick=e=>{const o=otrList[+el.dataset.i];const a=e.target.closest("[data-act]");
+    if(a){e.stopPropagation();const act=a.dataset.act;
+      if(act==="del"){if(a.dataset.sure){ls.set("otr_local",ls.get("otr_local",[]).filter(x=>x.id!==o.id));const mk=ls.get("otr_marks",{});delete mk[o.id];ls.set("otr_marks",mk);otrBuild();render(false);otrShowList()}else{a.dataset.sure=1;a.textContent="Точно удалить?"}return}
+      if(act==="undo"){const mk=ls.get("otr_marks",{});delete mk[o.id];ls.set("otr_marks",mk);otrBuild();render(false);otrShowList();return}
+      if(act==="done"){const box=el.querySelector(".otr-acts");box.innerHTML='<div class="otr-mark"><input type="date" class="s-input" value="'+new Date().toISOString().slice(0,10)+'"><select class="s-input">'+OTR_MARKS.map(m=>"<option>"+m+"</option>").join("")+'</select><button data-act="save">Сохранить</button></div>';return}
+      if(act==="save"){const box=el.querySelector(".otr-mark"),dv=box.querySelector("input").value,mkv=box.querySelector("select").value;if(!dv)return;const[y,mo,dd]=dv.split("-");const mk=ls.get("otr_marks",{});mk[o.id]={dd:dd+"."+mo,mk:mkv};ls.set("otr_marks",mk);otrBuild();render(false);otrShowList();return}
+      return}
+    if(e.target.closest(".otr-mark"))return;
+    if(o.lesson)jumpTo(o.lesson);else{closeModal();cur=monday(dateOf(o.d));setHash();render(false)}});
+  document.getElementById("otrLockBtn").onclick=()=>{ls.del("otr_code");otrBase=null;otrList=[];missMap={};const b=document.getElementById("otrBadge");b.hidden=true;render(false);closeModal()};
+  document.getElementById("otrAdd").onclick=()=>{const box=document.getElementById("otrForm");if(box.innerHTML){box.innerHTML="";return}
+    const iso=d=>YEAR+"-"+d.split(".")[1]+"-"+d.split(".")[0];const def=ALL.filter(x=>dateOf(x.d)<=todayMid).slice(-1)[0];
+    box.innerHTML='<div class="otr-addform"><label>Дата пропуска<input type="date" class="s-input" id="oaDate" min="'+iso(ALL[0].d)+'" max="'+iso(ALL[ALL.length-1].d)+'" value="'+(def?iso(def.d):"")+'"></label><div id="oaLessons"></div><label>Причина<select class="s-input" id="oaReason"><option>НХ</option><option>О</option><option value="Неуд">Неуд. оценка</option><option value="">Другая</option></select></label><button class="tool" id="oaSave" style="height:40px;padding:0 18px">Добавить</button><div class="s-hint" id="oaMsg"></div></div>';
+    const di=document.getElementById("oaDate"),lb=document.getElementById("oaLessons");
+    const fill=()=>{const v=di.value;if(!v){lb.innerHTML="";return}const[y,mo,dd]=v.split("-");const d=dd+"."+mo;const ls2=ALL.filter(x=>x.d===d);
+      lb.innerHTML=ls2.length?'<div class="oa-list">'+ls2.map((x,i)=>'<label class="oa-opt"><input type="checkbox" value="'+x.t+'"><span><b>'+x.t+"</b> "+esc(S[x.s])+' <span class="muted-s">· '+esc(P[x.p])+"</span></span></label>").join("")+"</div>":'<div class="s-hint">В этот день пар нет</div>';lb.dataset.d=d};
+    di.onchange=fill;di.oninput=fill;fill();
+    document.getElementById("oaSave").onclick=()=>{const d=lb.dataset.d,ts=[...lb.querySelectorAll("input:checked")].map(i=>i.value);const msg=document.getElementById("oaMsg");
+      if(!ts.length){msg.textContent="Отметьте хотя бы одну пару";return}
+      const local=ls.get("otr_local",[]);const r=document.getElementById("oaReason").value;let n=0;
+      ts.forEach(t=>{if(missMap[d+"|"+t])return;local.push({id:"l"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),d,t,r});n++});
+      ls.set("otr_local",local);otrBuild();render(false);otrShowList();}};
+  document.getElementById("mClose").focus()}
+document.getElementById("otrBtn").onclick=()=>{if(otrBase)otrShowList();else otrShowLock()};
+otrInit();
 render(true);
 </script>
 </body>
