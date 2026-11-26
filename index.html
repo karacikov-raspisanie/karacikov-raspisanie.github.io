@@ -194,7 +194,7 @@ mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px}
 .sheet.viewer .m-head h2{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sheet.viewer .m-body{display:flex;flex-direction:column;padding:0;flex:1;overflow:hidden}
 .fv-bar{padding:9px 14px;font-size:13px;background:color-mix(in srgb,var(--lec) 70%,var(--card));color:var(--ink);border-bottom:1px solid var(--line)}
-.fv-wrap{position:relative;flex:1;background:#525659}
+.fv-wrap{position:relative;flex:1;background:#525659;overflow:auto;-webkit-overflow-scrolling:touch}
 .fv{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
 .fv-load{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px}
 .fv-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
@@ -283,7 +283,7 @@ function render(scroll){
         el.querySelector(".subj").textContent=S[x.s];el.querySelector(".type").textContent=P[x.p];el.querySelector(".teacher").textContent=T[x.te];
         {const mo=(typeof missMap!=="undefined")&&missMap[k+"|"+x.t];if(mo){const s=document.createElement("span");s.className="miss"+(mo.done?" ok":"");s.textContent=mo.done?"пропуск · отработан":"пропуск · отработать";el.querySelector(".meta").appendChild(s)}}
         el.querySelector(".room").innerHTML=x.room?'<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0113 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>'+esc(x.room):"";
-        if(exp){const tpEl=el.querySelector(".topic");tpEl.innerHTML=(x.topic?'<div class="tp-text"></div>':"")+mmHtml(x);if(x.topic)tpEl.querySelector(".tp-text").textContent=x.topic;tpEl.querySelectorAll("a").forEach(a=>a.onclick=e=>{e.stopPropagation();if(a.dataset.fv&&MMF){e.preventDefault();openViewer(a.dataset.fv,+a.dataset.pg)}});{const ub=tpEl.querySelector(".mm-unlock");if(ub)ub.onclick=e=>{e.stopPropagation();mmAskCode(k+"|"+x.t)}}el.tabIndex=0;el.setAttribute("role","button");el.setAttribute("aria-expanded","false");const tg=()=>{const o=el.classList.toggle("open");el.setAttribute("aria-expanded",o)};el.onclick=tg;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tg()}}}
+        if(exp){const tpEl=el.querySelector(".topic");tpEl.innerHTML=(x.topic?'<div class="tp-text"></div>':"")+mmHtml(x);if(x.topic)tpEl.querySelector(".tp-text").textContent=x.topic;tpEl.querySelectorAll("a").forEach(a=>a.onclick=e=>{e.stopPropagation();e.preventDefault();if(a.dataset.fv&&MMF)openViewer(a.dataset.fv,+a.dataset.pg);else if(!MMF)mmAskCode(k+"|"+x.t,a.dataset.mid);else window.open(a.href,"_blank")});{const ub=tpEl.querySelector(".mm-unlock");if(ub)ub.onclick=e=>{e.stopPropagation();mmAskCode(k+"|"+x.t)}}el.tabIndex=0;el.setAttribute("role","button");el.setAttribute("aria-expanded","false");const tg=()=>{const o=el.classList.toggle("open");el.setAttribute("aria-expanded",o)};el.onclick=tg;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tg()}}}
         l.appendChild(el)});
       sec.appendChild(l)}
     box.appendChild(sec);
@@ -426,7 +426,7 @@ otrInit();
 var MMF=null;
 function findFile(u){for(const k in MMF)for(const f of MMF[k])if(f[0]===u)return f;return null}
 function openViewer(u,pg){const f=findFile(u);if(!f)return;openModal(f[1]);document.querySelector(".sheet").classList.add("viewer");
-  const src=AP+"/files/view?uuid="+encodeURIComponent(u);const gv="https://docs.google.com/viewer?embedded=true&url="+encodeURIComponent(src);
+  const src=AP+"/files/view?uuid="+encodeURIComponent(u);const mb=(()=>{const m=(f[2]||"").match(/([\d.,]+)\s*(КиБ|МиБ|ГиБ|Б)/);if(!m)return 0;const v=parseFloat(m[1].replace(",","."));return m[2]==="МиБ"?v:m[2]==="ГиБ"?v*1024:m[2]==="КиБ"?v/1024:v/1048576})();const word=/^(doc|docx|odt)$/.test(f[3]||"")&&mb<10;const gv=word?"https://view.officeapps.live.com/op/embed.aspx?src="+encodeURIComponent(src):"https://docs.google.com/viewer?embedded=true&url="+encodeURIComponent(src);
   mBody.innerHTML=(pg?'<div class="fv-bar">Тема начинается на <b>стр. '+pg+'</b>. Введите '+pg+' в поле «Страница» внизу просмотра.</div>':"")+'<div class="fv-wrap"><div class="fv-load">Загружаю файл…</div><iframe class="fv" src="'+gv+'" title="'+esc(f[1])+'" allowfullscreen></iframe></div><div class="fv-foot"><span>'+(f[3]?f[3].toUpperCase()+" · ":"")+esc(f[2]||"")+'</span><a href="'+fileUrl(f,pg)+'" target="_blank" rel="noopener">Не открывается? Открыть файл</a></div>';
   const fr=mBody.querySelector("iframe");let tries=0;fr.onload=()=>{mBody.querySelector(".fv-load").style.display="none"};
   // Google viewer sometimes returns blank on first load: retry once after 7s if still loading
@@ -437,8 +437,8 @@ var fileUrl=(f,pg)=>AP+"/files/view?uuid="+encodeURIComponent(f[0])+(pg&&f[3]===
 function topicKeys(t){const m=(t||"").match(/^Тема\s+([\d.,\s\-–]+?)\.\s/);if(!m)return[];const raw=m[1];const r=raw.match(/^(\d+)\s*[-–]\s*(\d+)$/);if(r){const a=[];for(let i=+r[1];i<=+r[2]&&a.length<6;i++)a.push(String(i));return a}return raw.split(/,\s*/).map(s=>s.trim().replace(/\.$/,"")).filter(Boolean)}
 function nameHasKey(n,k){const e=k.replace(/\./g,"\\.");return new RegExp("^"+e+"[.\\s]").test(n)||new RegExp("Тема\\s*№?\\s*"+e+"(?![\\d.]\\d)","i").test(n)}
 function mmHtml(x){const mm=MM[x.s];if(!mm)return"";
-  const pageLink=(r,label)=>'<a class="mm-a" target="_blank" rel="noopener" href="'+AP+"/mm/materials/view-mm?id="+mm[0]+"&methodical_id="+r[0]+'"><span class="mm-t">'+esc(r[2])+"</span>"+esc(label||r[1])+"</a>";
-  if(!MMF)return '<div class="mm-h">Материалы по предмету</div><button class="mm-unlock" type="button">🔒 Открывать файлы сразу — ввести код</button><div class="mm-list">'+mm[1].map(r=>pageLink(r)).join("")+"</div>";
+  const pageLink=(r,label)=>'<a class="mm-a" data-mid="'+r[0]+'" target="_blank" rel="noopener" href="'+AP+"/mm/materials/view-mm?id="+mm[0]+"&methodical_id="+r[0]+'"><span class="mm-t">'+esc(r[2])+"</span>"+esc(label||r[1])+"</a>";
+  if(!MMF)return '<div class="mm-h">Материалы по предмету</div><button class="mm-unlock" type="button">🔒 Ввести код, чтобы открывать материалы</button><div class="mm-list">'+mm[1].map(r=>pageLink(r)).join("")+"</div>";
   const keys=topicKeys(x.topic);const top=[];let html="";
   const fl=(f,pg,cls)=>'<a class="mm-a'+(cls||"")+'" data-fv="'+esc(f[0])+'" data-pg="'+(pg||0)+'" target="_blank" rel="noopener" href="'+fileUrl(f,pg)+'"><span class="mm-t">'+esc(f.__t||"")+(f[3]?' · '+f[3].toUpperCase():"")+(pg?' · стр. '+pg:"")+"</span>"+esc(f[1])+"</a>";
   mm[1].forEach(r=>{(MMF[r[0]]||[]).forEach(f=>{f.__t=r[2];if(!keys.length)return;let pg=0,hit=false;for(const k of keys){if(f[5]&&f[5][k]){pg=f[5][k];hit=true;break}if(nameHasKey(f[1],k)||nameHasKey(r[1],k)){hit=true}}if(hit)top.push([f,pg])})});
@@ -452,11 +452,11 @@ async function mmLoad(code){try{const E=await (await fetch("materials.json",{cac
   const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv:b(E.i)},key,b(E.c));
   const txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();return JSON.parse(txt)}catch(e){return null}}
 function reopen(k){const el=k&&document.querySelector('.les[data-k="'+k+'"]');if(el&&!el.classList.contains("open"))el.click()}
-function mmAskCode(k){openModal("Материалы");
-  mBody.innerHTML='<form id="mmLock" style="padding:18px 0 6px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:12px">Введите код, чтобы файлы открывались сразу.<br>Вводится один раз на этом устройстве.</div><input class="s-input" id="mmCode" type="password" inputmode="numeric" autocomplete="off" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:.3em;margin:0 auto;display:block"><button class="tool" type="submit" style="margin:14px auto 0;height:40px;padding:0 22px">Открыть</button><div class="s-hint" id="mmMsg" style="min-height:18px"></div></form>';
+function mmAskCode(k,mid){openModal("Материалы");
+  mBody.innerHTML='<form id="mmLock" style="padding:18px 0 6px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:12px">Введите код, чтобы открывать материалы прямо здесь.<br>Вводится один раз на этом устройстве.</div><input class="s-input" id="mmCode" type="password" inputmode="numeric" autocomplete="off" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:.3em;margin:0 auto;display:block"><button class="tool" type="submit" style="margin:14px auto 0;height:40px;padding:0 22px">Открыть</button><div class="s-hint" id="mmMsg" style="min-height:18px"></div></form>';
   const inp=document.getElementById("mmCode");setTimeout(()=>inp.focus(),30);
   document.getElementById("mmLock").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("mmMsg");msg.textContent="Проверяю…";const d=await mmLoad(inp.value.trim());
-    if(d){MMF=d;ls.set("mm_code",inp.value.trim());closeModal();render(false);reopen(k)}else msg.textContent="Неверный код"}}
+    if(d){MMF=d;ls.set("mm_code",inp.value.trim());closeModal();render(false);reopen(k);const fs=mid&&MMF[mid];if(fs&&fs.length===1)openViewer(fs[0][0],0)}else msg.textContent="Неверный код"}}
 (async()=>{const c=ls.get("mm_code",null);if(!c)return;const d=await mmLoad(c);if(d){MMF=d;render(false)}else ls.del("mm_code")})();
 
 document.getElementById("meBtn").onclick=()=>{openModal("by Karacikov");
