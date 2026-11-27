@@ -200,6 +200,30 @@ mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px}
 .fv-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
 .fv-foot a{color:var(--accent);font-weight:700;text-decoration:none}
 @media (max-width:600px){.modal{padding:max(8px,env(safe-area-inset-top)) 6px 6px}.sheet.viewer{height:calc(100vh - 16px);max-height:none;border-radius:12px}}
+.gr-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.gr-tile{border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center;background:var(--bg)}
+.gr-tt{font-size:11.5px;font-weight:700;color:var(--muted)}
+.gr-tv{font-size:24px;font-weight:800;margin:2px 0;font-variant-numeric:tabular-nums}
+.gr-tc{font-size:11px;color:var(--muted)}
+.gr-tile.g5 .gr-tv,.gr-ra.g5{color:var(--lec-i)}
+.gr-tile.g4 .gr-tv,.gr-ra.g4{color:var(--accent)}
+.gr-tile.g3 .gr-tv,.gr-ra.g3{color:var(--pr-i)}
+.gr-tile.g2 .gr-tv,.gr-ra.g2{color:var(--sem-i)}
+.gr-pick{display:flex;gap:8px}
+.gr-pv{flex:1;height:48px;border:0;border-radius:10px;font:inherit;font-size:22px;font-weight:800;cursor:pointer;color:#fff}
+.gr-pv.g5,.gr-chip.g5{background:#1e8e4a}.gr-pv.g4,.gr-chip.g4{background:#2f6fe0}.gr-pv.g3,.gr-chip.g3{background:#d08a12}.gr-pv.g2,.gr-chip.g2{background:#c63a2f}
+.gr-row{padding:10px 0;border-top:1px solid var(--line);position:relative}
+.m-sec+.gr-row,.s-hint+.gr-row{border-top:0}
+.gr-rh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.gr-rn{font-weight:700;font-size:14.5px;line-height:1.3}
+.gr-ra{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;flex:none}
+.gr-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.gr-chip{border:0;color:#fff;font:inherit;font-weight:800;font-size:15px;border-radius:8px;min-width:34px;height:38px;padding:0 6px;cursor:pointer;display:grid;place-items:center;line-height:1}
+.gr-chip small{font-size:9px;font-weight:600;opacity:.85}
+.gr-none{font-size:12.5px;color:var(--muted)}
+.gr-pop{margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:13.5px;line-height:1.4}
+.gr-pop span{color:var(--muted)}
+#grAll{display:block;margin:10px auto 0}
 footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
 </style>
 </head>
@@ -211,7 +235,8 @@ footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
         <button class="tool icon-only" id="searchBtn" aria-label="Поиск" title="Поиск"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
         <button class="tool tool-ex" id="examBtn" title="Зачёты и экзамены">Зачёты</button>
         <button class="tool tool-otr" id="otrBtn" title="Отработки">Отработки<span class="otr-badge" id="otrBadge" hidden></span></button>
-        <button class="tool" id="leadBtn" title="Руководство">Руководство</button>
+        <span class="tools-br"></span><button class="tool" id="leadBtn" title="Руководство">Руководство</button>
+        <button class="tool" id="grBtn" title="Мои оценки">Оценки</button>
         <button class="tool" id="meBtn" title="О разработчике">by Karacikov</button>
       </div></div>
     <div class="nav">
@@ -422,6 +447,41 @@ function otrShowList(){openModal("Отработки");const open=otrList.filter
   document.getElementById("mClose").focus()}
 document.getElementById("otrBtn").onclick=()=>otrShowList();
 otrInit();
+
+const GR_SUBJ=["Административная деятельность полиции","Административное право","Высшая математика","Деятельность ОВД РФ в условиях специальных правовых режимов","Документоведение","Иностранный язык","История России","Огневая подготовка","Основы информационной безопасности","Основы профессиональной служебной деятельности","Основы российской государственности","Первая помощь","Служебно-прикладная физическая подготовка","Средства вычислительной техники","Физика","Физическая подготовка","Языки программирования"];
+const grGet=()=>ls.get("grades",[]),grSet=v=>ls.set("grades",v);
+const isoDay=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const pDay=s=>{const[y,m,d]=s.split("-");return new Date(+y,+m-1,+d)};
+const avg=a=>a.length?a.reduce((s,g)=>s+g.v,0)/a.length:null;
+const fmtA=v=>v==null?"—":v.toFixed(2).replace(".",",");
+const aCls=v=>v==null?"":v>=4.5?"g5":v>=3.5?"g4":v>=2.5?"g3":"g2";
+let grShowAll=false,grFormOpen=false;
+function grRender(){const G=grGet(),now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const w0=monday(t0),w1=new Date(w0);w1.setDate(w1.getDate()+7);const m0=new Date(t0.getFullYear(),t0.getMonth(),1),m1=new Date(t0.getFullYear(),t0.getMonth()+1,1);
+  const inR=(g,a,b)=>{const d=pDay(g.d);return d>=a&&d<b};const W=G.filter(g=>inR(g,w0,w1)),M=G.filter(g=>inR(g,m0,m1));
+  const tile=(t,a)=>{const v=avg(a);return '<div class="gr-tile '+aCls(v)+'"><div class="gr-tt">'+t+'</div><div class="gr-tv">'+fmtA(v)+'</div><div class="gr-tc">'+a.length+" "+plural(a.length,"оценка","оценки","оценок")+"</div></div>"};
+  let html='<div class="gr-tiles">'+tile("За неделю",W)+tile("За "+["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][t0.getMonth()],M)+tile("За всё время",G)+"</div>";
+  html+='<button class="otr-add" id="grAdd">'+(grFormOpen?"Скрыть":"+ Поставить оценку")+'</button>';
+  if(grFormOpen)html+='<div class="otr-addform" id="grForm"><label>Предмет<select class="s-input" id="grS">'+GR_SUBJ.map((s,i)=>'<option value="'+i+'"'+(ls.get("gr_last_s",-1)==i?" selected":"")+">"+esc(s)+"</option>").join("")+'</select></label><label>Оценка<div class="gr-pick">'+[5,4,3,2].map(v=>'<button type="button" class="gr-pv g'+v+'" data-v="'+v+'">'+v+"</button>").join("")+'</div></label><label>Дата<input type="date" class="s-input" id="grD" value="'+isoDay(now)+'"></label><label>Заметка (необязательно)<input class="s-input" id="grN" maxlength="80" placeholder="например: тема 6, ответ у доски"></label><div class="s-hint" id="grMsg">Нажмите на оценку, чтобы сохранить</div></div>';
+  const rows=GR_SUBJ.map((s,i)=>({s,i,g:G.filter(x=>x.s===i).sort((a,b)=>a.d.localeCompare(b.d))}));
+  const withG=rows.filter(r=>r.g.length),noG=rows.filter(r=>!r.g.length);
+  html+='<div class="m-sec">Журнал</div>';
+  if(!G.length)html+='<div class="s-hint" style="text-align:center;padding:10px 0">Оценок пока нет. Нажмите «Поставить оценку».</div>';
+  const subjRow=r=>{const a=avg(r.g);return '<div class="gr-row"><div class="gr-rh"><div class="gr-rn">'+esc(r.s)+'</div><div class="gr-ra '+aCls(a)+'">'+fmtA(a)+'</div></div><div class="gr-chips">'+(r.g.length?r.g.map(g=>{const d=pDay(g.d);return '<button class="gr-chip g'+g.v+'" data-id="'+g.id+'" title="'+d.getDate()+" "+MON_S[d.getMonth()]+(g.n?" · "+esc(g.n):"")+'">'+g.v+"<small>"+d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+"</small></button>"}).join(""):'<span class="gr-none">нет оценок</span>')+"</div></div>"};
+  html+=withG.map(subjRow).join("");
+  if(noG.length)html+=grShowAll?noG.map(subjRow).join("")+'<button class="otr-lockbtn" id="grAll">Скрыть предметы без оценок</button>':'<button class="otr-lockbtn" id="grAll">Показать предметы без оценок ('+noG.length+")</button>";
+  html+='<div class="s-hint" style="text-align:center;margin-top:14px">Оценки хранятся только на этом устройстве</div>';
+  mBody.innerHTML=html;
+  document.getElementById("grAdd").onclick=()=>{grFormOpen=!grFormOpen;grRender()};
+  const all=document.getElementById("grAll");if(all)all.onclick=()=>{grShowAll=!grShowAll;grRender()};
+  mBody.querySelectorAll(".gr-pv").forEach(b=>b.onclick=()=>{const s=+document.getElementById("grS").value,d=document.getElementById("grD").value,n=document.getElementById("grN").value.trim();if(!d){document.getElementById("grMsg").textContent="Укажите дату";return}
+    const G2=grGet();G2.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),s,v:+b.dataset.v,d,n});grSet(G2);ls.set("gr_last_s",s);grRender();const m=document.getElementById("grMsg");if(m)m.textContent="Сохранено: "+b.dataset.v+" — "+GR_SUBJ[s]});
+  mBody.querySelectorAll(".gr-chip").forEach(c=>c.onclick=()=>{const g=grGet().find(x=>x.id===c.dataset.id);if(!g)return;const d=pDay(g.d);
+    const box=document.createElement("div");box.className="gr-pop";box.innerHTML='<b>'+g.v+'</b> · '+GR_SUBJ[g.s]+'<br><span>'+d.getDate()+" "+MON[d.getMonth()]+(g.n?" · "+esc(g.n):"")+'</span><div class="otr-acts"><button data-a="del">Удалить</button><button data-a="x">Отмена</button></div>';
+    mBody.querySelectorAll(".gr-pop").forEach(x=>x.remove());c.closest(".gr-row").appendChild(box);
+    box.querySelector('[data-a="x"]').onclick=()=>box.remove();
+    const del=box.querySelector('[data-a="del"]');del.onclick=()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent="Точно удалить?";return}grSet(grGet().filter(x=>x.id!==g.id));grRender()}})}
+document.getElementById("grBtn").onclick=()=>{grFormOpen=!grGet().length;openModal("Мои оценки");grRender();document.getElementById("mClose").focus()};
 
 var MMF=null;
 function findFile(u){for(const k in MMF)for(const f of MMF[k])if(f[0]===u)return f;return null}
