@@ -211,6 +211,8 @@ mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px}
 .gr-tile.g2 .gr-tv,.gr-ra.g2{color:var(--sem-i)}
 .gr-pick{display:flex;gap:8px}
 .gr-pv{flex:1;height:48px;border:0;border-radius:10px;font:inherit;font-size:22px;font-weight:800;cursor:pointer;color:#fff}
+.gr-chip.gx{background:var(--bg);color:var(--muted);border:1px solid var(--line);font-size:12px}
+.gr-chip.own{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85),0 0 0 2px var(--ink)}
 .gr-pv.g5,.gr-chip.g5{background:#1e8e4a}.gr-pv.g4,.gr-chip.g4{background:#2f6fe0}.gr-pv.g3,.gr-chip.g3{background:#d08a12}.gr-pv.g2,.gr-chip.g2{background:#c63a2f}
 .gr-row{padding:10px 0;border-top:1px solid var(--line);position:relative}
 .m-sec+.gr-row,.s-hint+.gr-row{border-top:0}
@@ -450,38 +452,56 @@ otrInit();
 
 const GR_SUBJ=["Административная деятельность полиции","Административное право","Высшая математика","Деятельность ОВД РФ в условиях специальных правовых режимов","Документоведение","Иностранный язык","История России","Огневая подготовка","Основы информационной безопасности","Основы профессиональной служебной деятельности","Основы российской государственности","Первая помощь","Служебно-прикладная физическая подготовка","Средства вычислительной техники","Физика","Физическая подготовка","Языки программирования"];
 const grGet=()=>ls.get("grades",[]),grSet=v=>ls.set("grades",v);
+var GRV=null;
 const isoDay=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const pDay=s=>{const[y,m,d]=s.split("-");return new Date(+y,+m-1,+d)};
-const avg=a=>a.length?a.reduce((s,g)=>s+g.v,0)/a.length:null;
+const isNum=v=>/^[2-5]$/.test(String(v));
+const avg=a=>{const n=a.filter(g=>isNum(g.v));return n.length?n.reduce((s,g)=>s+ +g.v,0)/n.length:null};
+const cntN=a=>a.filter(g=>isNum(g.v)).length;
 const fmtA=v=>v==null?"—":v.toFixed(2).replace(".",",");
 const aCls=v=>v==null?"":v>=4.5?"g5":v>=3.5?"g4":v>=2.5?"g3":"g2";
+const chipCls=v=>isNum(v)?"g"+v:"gx";
 let grShowAll=false,grFormOpen=false;
-function grRender(){const G=grGet(),now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+async function grLoad(code){try{const E=await (await fetch("grades.json",{cache:"no-store"})).json();const b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b(E.s),iterations:E.n,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv:b(E.i)},key,b(E.c));
+  return JSON.parse(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text())}catch(e){return null}}
+function grAll(){const V=(GRV?GRV.g:[]).map((x,i)=>({id:"v"+i,s:x[0],v:x[1],d:x[2],n:x[3],src:"v"})).filter(g=>isNum(g.v));return V.concat(grGet().map(g=>Object.assign({src:"l"},g)))}
+function grRender(){const G=grAll(),now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const w0=monday(t0),w1=new Date(w0);w1.setDate(w1.getDate()+7);const m0=new Date(t0.getFullYear(),t0.getMonth(),1),m1=new Date(t0.getFullYear(),t0.getMonth()+1,1);
   const inR=(g,a,b)=>{const d=pDay(g.d);return d>=a&&d<b};const W=G.filter(g=>inR(g,w0,w1)),M=G.filter(g=>inR(g,m0,m1));
-  const tile=(t,a)=>{const v=avg(a);return '<div class="gr-tile '+aCls(v)+'"><div class="gr-tt">'+t+'</div><div class="gr-tv">'+fmtA(v)+'</div><div class="gr-tc">'+a.length+" "+plural(a.length,"оценка","оценки","оценок")+"</div></div>"};
+  const tile=(t,a)=>{const v=avg(a),n=cntN(a);return '<div class="gr-tile '+aCls(v)+'"><div class="gr-tt">'+t+'</div><div class="gr-tv">'+fmtA(v)+'</div><div class="gr-tc">'+n+" "+plural(n,"оценка","оценки","оценок")+"</div></div>"};
   let html='<div class="gr-tiles">'+tile("За неделю",W)+tile("За "+["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][t0.getMonth()],M)+tile("За всё время",G)+"</div>";
-  html+='<button class="otr-add" id="grAdd">'+(grFormOpen?"Скрыть":"+ Поставить оценку")+'</button>';
-  if(grFormOpen)html+='<div class="otr-addform" id="grForm"><label>Предмет<select class="s-input" id="grS">'+GR_SUBJ.map((s,i)=>'<option value="'+i+'"'+(ls.get("gr_last_s",-1)==i?" selected":"")+">"+esc(s)+"</option>").join("")+'</select></label><label>Оценка<div class="gr-pick">'+[5,4,3,2].map(v=>'<button type="button" class="gr-pv g'+v+'" data-v="'+v+'">'+v+"</button>").join("")+'</div></label><label>Дата<input type="date" class="s-input" id="grD" value="'+isoDay(now)+'"></label><label>Заметка (необязательно)<input class="s-input" id="grN" maxlength="80" placeholder="например: тема 6, ответ у доски"></label><div class="s-hint" id="grMsg">Нажмите на оценку, чтобы сохранить</div></div>';
+  if(GRV)html+='<div class="s-hint" style="text-align:center;margin-top:8px">Оценки из электронного журнала вуза на '+esc(GRV.upd)+"</div>";
+  html+='<button class="otr-add" id="grAdd">'+(grFormOpen?"Скрыть":"+ Добавить свою оценку")+'</button>';
+  if(grFormOpen)html+='<div class="otr-addform" id="grForm"><label>Предмет<select class="s-input" id="grS">'+GR_SUBJ.map((s,i)=>'<option value="'+i+'"'+(ls.get("gr_last_s",-1)==i?" selected":"")+">"+esc(s)+"</option>").join("")+'</select></label><label>Оценка<div class="gr-pick">'+[5,4,3,2].map(v=>'<button type="button" class="gr-pv g'+v+'" data-v="'+v+'">'+v+"</button>").join("")+'</div></label><label>Дата<input type="date" class="s-input" id="grD" value="'+isoDay(now)+'"></label><label>Заметка (необязательно)<input class="s-input" id="grN" maxlength="80" placeholder="например: тема 6, ответ у доски"></label><div class="s-hint" id="grMsg">Нажмите на оценку, чтобы сохранить. Свои оценки видны только на этом устройстве.</div></div>';
   const rows=GR_SUBJ.map((s,i)=>({s,i,g:G.filter(x=>x.s===i).sort((a,b)=>a.d.localeCompare(b.d))}));
   const withG=rows.filter(r=>r.g.length),noG=rows.filter(r=>!r.g.length);
   html+='<div class="m-sec">Журнал</div>';
-  if(!G.length)html+='<div class="s-hint" style="text-align:center;padding:10px 0">Оценок пока нет. Нажмите «Поставить оценку».</div>';
-  const subjRow=r=>{const a=avg(r.g);return '<div class="gr-row"><div class="gr-rh"><div class="gr-rn">'+esc(r.s)+'</div><div class="gr-ra '+aCls(a)+'">'+fmtA(a)+'</div></div><div class="gr-chips">'+(r.g.length?r.g.map(g=>{const d=pDay(g.d);return '<button class="gr-chip g'+g.v+'" data-id="'+g.id+'" title="'+d.getDate()+" "+MON_S[d.getMonth()]+(g.n?" · "+esc(g.n):"")+'">'+g.v+"<small>"+d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+"</small></button>"}).join(""):'<span class="gr-none">нет оценок</span>')+"</div></div>"};
+  if(!G.length)html+='<div class="s-hint" style="text-align:center;padding:10px 0">Оценок пока нет.</div>';
+  const subjRow=r=>{const a=avg(r.g);return '<div class="gr-row"><div class="gr-rh"><div class="gr-rn">'+esc(r.s)+'</div><div class="gr-ra '+aCls(a)+'">'+fmtA(a)+'</div></div><div class="gr-chips">'+(r.g.length?r.g.map(g=>{const d=pDay(g.d);return '<button class="gr-chip '+chipCls(g.v)+(g.src==="l"?" own":"")+'" data-id="'+g.id+'">'+esc(g.v)+"<small>"+d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+"</small></button>"}).join(""):'<span class="gr-none">нет оценок</span>')+"</div></div>"};
   html+=withG.map(subjRow).join("");
   if(noG.length)html+=grShowAll?noG.map(subjRow).join("")+'<button class="otr-lockbtn" id="grAll">Скрыть предметы без оценок</button>':'<button class="otr-lockbtn" id="grAll">Показать предметы без оценок ('+noG.length+")</button>";
-  html+='<div class="s-hint" style="text-align:center;margin-top:14px">Оценки хранятся только на этом устройстве</div>';
+  html+='<div class="s-hint" style="text-align:center;margin-top:14px">Свои оценки отмечены рамкой.</div>';
   mBody.innerHTML=html;
   document.getElementById("grAdd").onclick=()=>{grFormOpen=!grFormOpen;grRender()};
   const all=document.getElementById("grAll");if(all)all.onclick=()=>{grShowAll=!grShowAll;grRender()};
   mBody.querySelectorAll(".gr-pv").forEach(b=>b.onclick=()=>{const s=+document.getElementById("grS").value,d=document.getElementById("grD").value,n=document.getElementById("grN").value.trim();if(!d){document.getElementById("grMsg").textContent="Укажите дату";return}
-    const G2=grGet();G2.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),s,v:+b.dataset.v,d,n});grSet(G2);ls.set("gr_last_s",s);grRender();const m=document.getElementById("grMsg");if(m)m.textContent="Сохранено: "+b.dataset.v+" — "+GR_SUBJ[s]});
-  mBody.querySelectorAll(".gr-chip").forEach(c=>c.onclick=()=>{const g=grGet().find(x=>x.id===c.dataset.id);if(!g)return;const d=pDay(g.d);
-    const box=document.createElement("div");box.className="gr-pop";box.innerHTML='<b>'+g.v+'</b> · '+GR_SUBJ[g.s]+'<br><span>'+d.getDate()+" "+MON[d.getMonth()]+(g.n?" · "+esc(g.n):"")+'</span><div class="otr-acts"><button data-a="del">Удалить</button><button data-a="x">Отмена</button></div>';
+    const G2=grGet();G2.push({id:"l"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),s,v:+b.dataset.v,d,n});grSet(G2);ls.set("gr_last_s",s);grRender();const m=document.getElementById("grMsg");if(m)m.textContent="Сохранено: "+b.dataset.v+" — "+GR_SUBJ[s]});
+  mBody.querySelectorAll(".gr-chip").forEach(c=>c.onclick=()=>{const g=grAll().find(x=>x.id===c.dataset.id);if(!g)return;const d=pDay(g.d);
+    const box=document.createElement("div");box.className="gr-pop";box.innerHTML='<b>'+esc(g.v)+'</b> · '+GR_SUBJ[g.s]+'<br><span>'+d.getDate()+" "+MON[d.getMonth()]+(g.n?" · "+esc(g.n):"")+(g.src==="v"?" · из журнала вуза":" · своя оценка")+'</span><div class="otr-acts">'+(g.src==="l"?'<button data-a="del">Удалить</button>':"")+'<button data-a="x">Закрыть</button></div>';
     mBody.querySelectorAll(".gr-pop").forEach(x=>x.remove());c.closest(".gr-row").appendChild(box);
     box.querySelector('[data-a="x"]').onclick=()=>box.remove();
-    const del=box.querySelector('[data-a="del"]');del.onclick=()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent="Точно удалить?";return}grSet(grGet().filter(x=>x.id!==g.id));grRender()}})}
-document.getElementById("grBtn").onclick=()=>{grFormOpen=!grGet().length;openModal("Мои оценки");grRender();document.getElementById("mClose").focus()};
+    const del=box.querySelector('[data-a="del"]');if(del)del.onclick=()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent="Точно удалить?";return}grSet(grGet().filter(x=>x.id!==g.id));grRender()}})}
+function grShowLock(){openModal("Мои оценки");
+  mBody.innerHTML='<form id="grLock" style="padding:18px 0 6px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:12px">Введите код доступа</div><input class="s-input" id="grCode" type="password" inputmode="numeric" autocomplete="off" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:.3em;margin:0 auto;display:block"><button class="tool" type="submit" style="margin:14px auto 0;height:40px;padding:0 22px">Открыть</button></form>';
+  const inp=document.getElementById("grCode");setTimeout(()=>inp.focus(),30);
+  document.getElementById("grLock").onsubmit=async e=>{e.preventDefault();const c=inp.value.trim();const d=c?await grLoad(c):null;
+    if(d){GRV=d;ls.set("gr_code",c);grFormOpen=false;grRender()}
+    else mBody.innerHTML='<div style="text-align:center;padding:34px 10px 26px"><div style="font-size:40px;margin-bottom:10px">🛠</div><div style="font-weight:800;font-size:17px">В данный момент этот раздел в разработке</div><div style="color:var(--muted);font-size:14px;margin-top:6px">Загляните позже</div></div>'}}
+document.getElementById("grBtn").onclick=()=>{if(GRV){grFormOpen=false;openModal("Мои оценки");grRender();document.getElementById("mClose").focus()}else grShowLock()};
+(async()=>{const c=ls.get("gr_code",null);if(!c)return;const d=await grLoad(c);if(d)GRV=d;else ls.del("gr_code")})();
 
 var MMF=null;
 function findFile(u){for(const k in MMF)for(const f of MMF[k])if(f[0]===u)return f;return null}
