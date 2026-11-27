@@ -418,8 +418,9 @@ function otrRow(o,i){const dt=dateOf(o.d);
   '<div class="st" style="font-size:13px;color:var(--muted);margin-top:5px">'+esc(o.lesson&&o.lesson.topic?o.lesson.topic:(o.tn?"Тема "+o.tn:""))+"</div>"+
   '<div class="otr-acts">'+(o.done?'<button data-act="undo">Вернуть в «нужно отработать»</button>':'<button data-act="done">✓ Отработал</button>')+(o.local?'<button data-act="del">Удалить</button>':"")+"</div></div></div>"}
 function otrShowList(){openModal("Отработки");const open=otrList.filter(o=>!o.done);
-  let html='<div class="ex-sum"><span>Не отработано: '+open.length+'</span><span>Отработано: '+(otrList.length-open.length)+'</span></div><button class="otr-add" id="otrAdd">+ Добавить пропущенную пару</button><div id="otrForm"></div>';
+  let html='<div class="ex-sum"><span>Не отработано: '+open.length+'</span><span>Отработано: '+(otrList.length-open.length)+'</span></div>';
   if(open.length){html+='<div class="m-sec">Нужно отработать</div>';otrList.forEach((o,i)=>{if(!o.done)html+=otrRow(o,i)})}
+  html+='<button class="otr-add" id="otrAdd">+ Добавить пропущенную пару</button><div id="otrForm"></div>';
   const done=otrList.map((o,i)=>[o,i]).filter(([o])=>o.done).sort((a,b)=>dateOf(b[0].dd)-dateOf(a[0].dd));
   if(done.length){html+='<div class="m-sec">Отработано</div>';done.forEach(([o,i])=>html+=otrRow(o,i))}
   if(!otrList.length)html+='<div class="s-hint" style="text-align:center;padding:18px 6px 4px">Пока пусто. Нажмите «Добавить пропущенную пару», чтобы отметить пропуск.</div>';
@@ -474,8 +475,6 @@ function grRender(){const G=grAll(),now=new Date(),t0=new Date(now.getFullYear()
   const tile=(t,a)=>{const v=avg(a),n=cntN(a);return '<div class="gr-tile '+aCls(v)+'"><div class="gr-tt">'+t+'</div><div class="gr-tv">'+fmtA(v)+'</div><div class="gr-tc">'+n+" "+plural(n,"оценка","оценки","оценок")+"</div></div>"};
   let html='<div class="gr-tiles">'+tile("За неделю",W)+tile("За "+["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][t0.getMonth()],M)+tile("За всё время",G)+"</div>";
   if(GRV)html+='<div class="s-hint" style="text-align:center;margin-top:8px">Оценки из электронного журнала вуза на '+esc(GRV.upd)+"</div>";
-  html+='<button class="otr-add" id="grAdd">'+(grFormOpen?"Скрыть":"+ Добавить свою оценку")+'</button>';
-  if(grFormOpen)html+='<div class="otr-addform" id="grForm"><label>Предмет<select class="s-input" id="grS">'+GR_SUBJ.map((s,i)=>'<option value="'+i+'"'+(ls.get("gr_last_s",-1)==i?" selected":"")+">"+esc(s)+"</option>").join("")+'</select></label><label>Оценка<div class="gr-pick">'+[5,4,3,2].map(v=>'<button type="button" class="gr-pv g'+v+'" data-v="'+v+'">'+v+"</button>").join("")+'</div></label><label>Дата<input type="date" class="s-input" id="grD" value="'+isoDay(now)+'"></label><label>Заметка (необязательно)<input class="s-input" id="grN" maxlength="80" placeholder="например: тема 6, ответ у доски"></label><div class="s-hint" id="grMsg">Нажмите на оценку, чтобы сохранить. Свои оценки видны только на этом устройстве.</div></div>';
   const rows=GR_SUBJ.map((s,i)=>({s,i,g:G.filter(x=>x.s===i).sort((a,b)=>a.d.localeCompare(b.d))}));
   const withG=rows.filter(r=>r.g.length),noG=rows.filter(r=>!r.g.length);
   html+='<div class="m-sec">Журнал</div>';
@@ -483,6 +482,8 @@ function grRender(){const G=grAll(),now=new Date(),t0=new Date(now.getFullYear()
   const subjRow=r=>{const a=avg(r.g);return '<div class="gr-row"><div class="gr-rh"><div class="gr-rn">'+esc(r.s)+'</div><div class="gr-ra '+aCls(a)+'">'+fmtA(a)+'</div></div><div class="gr-chips">'+(r.g.length?r.g.map(g=>{const d=pDay(g.d);return '<button class="gr-chip '+chipCls(g.v)+(g.src==="l"?" own":"")+'" data-id="'+g.id+'">'+esc(g.v)+"<small>"+d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+"</small></button>"}).join(""):'<span class="gr-none">нет оценок</span>')+"</div></div>"};
   html+=withG.map(subjRow).join("");
   if(noG.length)html+=grShowAll?noG.map(subjRow).join("")+'<button class="otr-lockbtn" id="grAll">Скрыть предметы без оценок</button>':'<button class="otr-lockbtn" id="grAll">Показать предметы без оценок ('+noG.length+")</button>";
+  html+='<button class="otr-add" id="grAdd">'+(grFormOpen?"Скрыть":"+ Добавить свою оценку")+'</button>';
+  if(grFormOpen)html+='<div class="otr-addform" id="grForm"><label>Предмет<select class="s-input" id="grS">'+GR_SUBJ.map((s,i)=>'<option value="'+i+'"'+(ls.get("gr_last_s",-1)==i?" selected":"")+">"+esc(s)+"</option>").join("")+'</select></label><label>Оценка<div class="gr-pick">'+[5,4,3,2].map(v=>'<button type="button" class="gr-pv g'+v+'" data-v="'+v+'">'+v+"</button>").join("")+'</div></label><label>Дата<input type="date" class="s-input" id="grD" value="'+isoDay(now)+'"></label><label>Заметка (необязательно)<input class="s-input" id="grN" maxlength="80" placeholder="например: тема 6, ответ у доски"></label><div class="s-hint" id="grMsg">Нажмите на оценку, чтобы сохранить. Свои оценки видны только на этом устройстве.</div></div>';
   html+='<div class="s-hint" style="text-align:center;margin-top:14px">Свои оценки отмечены рамкой.</div>';
   mBody.innerHTML=html;
   document.getElementById("grAdd").onclick=()=>{grFormOpen=!grFormOpen;grRender()};
